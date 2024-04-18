@@ -2,6 +2,7 @@ import pygame
 import sys
 import random
 import math
+import copy
 
 random.seed(0)
 
@@ -19,26 +20,56 @@ pygame.display.set_caption("sandbox")
 font = pygame.font.SysFont("Arial", int(BLOCK_SIZE))
 clock = pygame.time.Clock()
 
-class Game():
+class UserInput():
   def __init__(self):
-     self.board = [[0,0,2,2],[0,4,0,0],[0,0,0,0],[0,0,0,0]]
+    pass
 
-     self.colors = {
-       "background": "#776E65",
-       "empty_tile": "#CDC1B4",
-       2: "#EEE4DA",
-       4: "#EDE0C8",
-       8: "#F2B179",
-       16: "#F59563",
-       32: "#F67C5F",
-       64: "#F65E3B",
-       128: "#EDCF72",
-       256: "#EDCC61",
-       512: "#EDC850",
-       1024: "#EDC53F",
-       2048: "#EDC22E",
-       "greater": "black"
-     }
+  def get_key():
+    key = None
+
+    for event in pygame.event.get():
+      if event.type == pygame.QUIT:
+        pygame.quit()
+        sys.exit()
+      
+      if pygame.key.get_pressed()[pygame.K_LEFT]:
+        key = 0
+      elif pygame.key.get_pressed()[pygame.K_RIGHT]:
+        key = 1
+      elif pygame.key.get_pressed()[pygame.K_UP]:
+        key = 2
+      elif pygame.key.get_pressed()[pygame.K_DOWN]:
+        key = 3
+      
+    return key
+
+class Game2048():
+  def __init__(self, player=UserInput.get_key):
+    self.board = [[0,0,2,2],[0,4,0,0],[0,0,0,0],[0,0,0,0]]
+
+    self.colors = {
+      "background": "#776E65",
+      "empty_tile": "#CDC1B4",
+      2: "#EEE4DA",
+      4: "#EDE0C8",
+      8: "#F2B179",
+      16: "#F59563",
+      32: "#F67C5F",
+      64: "#F65E3B",
+      128: "#EDCF72",
+      256: "#EDCC61",
+      512: "#EDC850",
+      1024: "#EDC53F",
+      2048: "#EDC22E",
+      "greater": "black"
+    }
+
+    self.player = player
+
+    if player is not UserInput.get_key:
+      self.human_player = False
+    else:
+      self.human_player = True
 
   def update(self, key_pressed):
     if key_pressed == None:
@@ -91,71 +122,53 @@ class Game():
     val = 2 if random.random() > 0.1 else 4
 
     self.board[open_indices[idx][0]][open_indices[idx][1]] = val
+  
+  def render(self):
+    WINDOW.fill(self.colors["background"])
 
-
-class UserInput():
-  def __init__(self):
-    pass
-
-  def get_key():
-    key = None
-
-    for event in pygame.event.get():
-      if event.type == pygame.QUIT:
-        pygame.quit()
-        sys.exit()
-      
-      if pygame.key.get_pressed()[pygame.K_LEFT]:
-        key = 0
-      elif pygame.key.get_pressed()[pygame.K_RIGHT]:
-        key = 1
-      elif pygame.key.get_pressed()[pygame.K_UP]:
-        key = 2
-      elif pygame.key.get_pressed()[pygame.K_DOWN]:
-        key = 3
-      
-    return key
-
-def game_loop():
-
-  game = Game()
-  player_input = UserInput()
-
-  def render():
-    WINDOW.fill(game.colors["background"])
-
-    for row, array in enumerate(game.board):
+    for row, array in enumerate(self.board):
       offset_y = (PADDING * (row+1)) + BLOCK_SIZE * row
 
       for column, tile in enumerate(array):
         offset_x = (PADDING * (column+1)) + BLOCK_SIZE * column
 
-        if (game.board[row][column] == 0):
-          color = game.colors["empty_tile"]
-        elif (game.board[row][column] > 2048):
-          color = game.colors["greater"]
+        if (self.board[row][column] == 0):
+          color = self.colors["empty_tile"]
+        elif (self.board[row][column] > 2048):
+          color = self.colors["greater"]
         else:
-          color = game.colors[game.board[row][column]]
+          color = self.colors[self.board[row][column]]
         
         rect = pygame.Rect(offset_x, offset_y, BLOCK_SIZE, BLOCK_SIZE)
         WINDOW.fill(color, rect=rect)
 
-        if game.board[row][column] > 0:
-          text = font.render(str(game.board[row][column]), False, "black")
+        if self.board[row][column] > 0:
+          text = font.render(str(self.board[row][column]), False, "black")
           WINDOW.blit(text, (offset_x, offset_y))
-
     pygame.display.flip()
+  
+  def gameover(self):
+    num_empty = 0
 
+    for row, arr in enumerate(self.board):
+      for col, val in enumerate(arr):
+        if (val == 0):
+          num_empty += 1
     
-  while True:
-    # run at max fps
-    clock.tick(1000)
+    return num_empty == 0
 
-    if True:
-      key = UserInput.get_key()
+  def start(self):
+    while not self.gameover():
+      # run at max fps
+      clock.tick(1)
 
-    game.update(key)
-    render()
+      if self.human_player:
+        key = self.player()
+      else:
+        state = copy.deepcopy(self.board)
+        key = self.player(state)
 
-game_loop()
+      self.update(key)
 
+      self.render()
+      #pygame.time.wait(1000)
